@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RouteAhead - Journey Weather Planner</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <header>
+    <div class="logo">Route<span>Ahead</span></div>
+    <p class="tagline">Live weather - Every province - Every km</p>
+  </header>
+
+  <main>
+
+    <section class="card" id="quickCard">
+      <h2 class="card-title">Quick Weather Check</h2>
+      <div class="input-row">
+        <label for="quickProvince" class="sr-only">Province</label>
+        <select id="quickProvince" class="input"></select>
+        <button class="btn btn-accent" onclick="quickCheck()">Check</button>
+      </div>
+      <div id="quickResult" class="result-box hidden"></div>
+    </section>
+
+    <section class="card" id="journeyCard">
+      <h2 class="card-title">Plan Your Journey</h2>
+
+      <label class="lbl" for="origin">Origin Province</label>
+      <div id="originWrapper"></div>
+
+      <div id="stopsWrapper"></div>
+
+      <button class="btn btn-ghost add-stop-btn" onclick="addStop()">+ Add a stop</button>
+
+      <label class="lbl" for="destination">Destination Province</label>
+      <div id="destinationWrapper"></div>
+
+      <button class="btn btn-primary" onclick="planJourney()">
+        Get Journey Weather
+      </button>
+    </section>
+
+    <section id="journeyResult" class="hidden"></section>
+
+  </main>
+
+  <footer>
+    RouteAhead &copy; 2025 - Powered by
+    <a href="https://open-meteo.com" target="_blank">Open-Meteo</a>
+  </footer>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
