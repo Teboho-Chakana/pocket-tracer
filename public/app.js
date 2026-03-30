@@ -1,321 +1,154 @@
-const API = "http://localhost:3001";
-
+const API = "http://127.0.0.1:3001";
 let PROVINCES_DATA = [];
+let map = null;
+let routingControl = null;
+let isLoginMode = true;
 
-const TYPE_LABELS = { mall: "Mall", landmark: "Landmark", hospital: "Hospital", university: "University" };
-
-function showToast(msg, isError = false) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.className = "toast show" + (isError ? " error" : "");
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => (t.className = "toast"), 3200);
+// --- UI HELPERS ---
+function wipeFields() {
+  document.getElementById("emailInput").value = "";
+  document.getElementById("passwordInput").value = "";
+  document.getElementById("usernameInput").value = "";
 }
 
-function buildSelect(id, options, placeholder, onchangeFn) {
-  const opts = options.map(function(o) {
-    return "<option value=\"" + o.value + "\">" + o.label + "</option>";
-  }).join("");
-  const onchange = onchangeFn ? " onchange=\"" + onchangeFn + "('" + id + "')\"" : "";
-  return "<select class=\"input\" id=\"" + id + "\"" + onchange + ">" +
-    "<option value=\"\" disabled selected>" + placeholder + "</option>" +
-    opts + "</select>";
+function toggleFooter(show) {
+  const footer = document.getElementById("mainFooter");
+  if (show) footer.classList.remove("hidden");
+  else footer.classList.add("hidden");
 }
 
-function getCitiesForProvince(provinceKey) {
-  const prov = PROVINCES_DATA.find(function(p) { return p.key === provinceKey; });
-  return prov ? prov.cities : [];
+// --- AUTH LOGIC ---
+function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  wipeFields();
+  document.getElementById("signupFields").classList.toggle("hidden");
+  document.getElementById("authSubtitle").innerText = isLoginMode ? "Sign in to start your journey" : "Register your account";
+  document.getElementById("authBtn").innerText = isLoginMode ? "Login" : "Register Now";
 }
 
-function getPlacesForCity(provinceKey, cityKey) {
-  const cities = getCitiesForProvince(provinceKey);
-  const city   = cities.find(function(c) { return c.key === cityKey; });
-  return city ? city.places : [];
-}
+function handleAuth() {
+  const email = document.getElementById("emailInput").value;
+  const pass = document.getElementById("passwordInput").value;
+  const name = document.getElementById("usernameInput").value;
 
-function onProvinceChange(selectId) {
-  const provinceKey  = document.getElementById(selectId).value;
-  const cities       = getCitiesForProvince(provinceKey);
-  const cityWrapper  = document.getElementById(selectId + "_cityWrapper");
-  const placeWrapper = document.getElementById(selectId + "_placeWrapper");
+  if (!email.includes("@") || !email.includes(".")) return alert("Enter valid email!");
 
-  if (!cityWrapper) return;
+  let users = JSON.parse(localStorage.getItem("routeUsers") || "[]");
 
-  cityWrapper.innerHTML = buildSelect(
-    selectId + "_city",
-    cities.map(function(c) { return { value: c.key, label: c.name }; }),
-    "Select a city",
-    "onCityChange"
-  );
-  cityWrapper.style.display = "block";
-
-  if (placeWrapper) {
-    placeWrapper.innerHTML = "";
-    placeWrapper.style.display = "none";
+  if (isLoginMode) {
+    const user = users.find(u => u.email === email && u.password === pass);
+    if (user) {
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      wipeFields();
+      showPlanner();
+    } else alert("Invalid credentials.");
+  } else {
+    if (!name || !pass) return alert("Fill all fields!");
+    const newUser = { name, email, password: pass };
+    users.push(newUser);
+    localStorage.setItem("routeUsers", JSON.stringify(users));
+    localStorage.setItem("currentUser", JSON.stringify(newUser));
+    wipeFields();
+    showPlanner();
   }
 }
 
-function onCityChange(citySelectId) {
-  const provinceSelectId = citySelectId.replace("_city", "");
-  const provinceKey      = document.getElementById(provinceSelectId).value;
-  const cityKey          = document.getElementById(citySelectId).value;
-  const places           = getPlacesForCity(provinceKey, cityKey);
-  const placeWrapper     = document.getElementById(provinceSelectId + "_placeWrapper");
-
-  if (!placeWrapper) return;
-
-  if (places.length === 0) {
-    placeWrapper.style.display = "none";
-    return;
-  }
-
-  const grouped = {};
-  places.forEach(function(p) {
-    if (!grouped[p.type]) grouped[p.type] = [];
-    grouped[p.type].push(p);
-  });
-
-  let opts = "<option value=\"\" disabled selected>Select a place</option>";
-  Object.keys(grouped).forEach(function(type) {
-    opts += "<optgroup label=\"" + (TYPE_LABELS[type] || type) + "\">";
-    grouped[type].forEach(function(p) {
-      opts += "<option value=\"" + p.name + "\">" + p.name + "</option>";
-    });
-    opts += "</optgroup>";
-  });
-
-  placeWrapper.innerHTML = "<select class=\"input\" id=\"" + provinceSelectId + "_place\" style=\"margin-top:.5rem\">" + opts + "</select>";
-  placeWrapper.style.display = "block";
+function showPlanner() {
+  const user = JSON.parse(localStorage.getItem("currentUser"));
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("plannerPage").classList.remove("hidden");
+  document.getElementById("welcomeUser").innerText = `Welcome, ${user.name}`;
+  toggleFooter(true);
 }
 
-function buildSelectionGroup(baseId, provincePlaceholder) {
-  return buildSelect(
-    baseId,
-    PROVINCES_DATA.map(function(p) { return { value: p.key, label: p.name }; }),
-    provincePlaceholder,
-    "onProvinceChange"
-  ) +
-  "<div id=\"" + baseId + "_cityWrapper\" style=\"display:none;margin-top:.5rem\"></div>" +
-  "<div id=\"" + baseId + "_placeWrapper\" style=\"display:none;margin-top:.5rem\"></div>";
+function logout() {
+  localStorage.removeItem("currentUser");
+  wipeFields();
+  location.reload();
 }
 
-function getSelection(baseId) {
-  const provEl  = document.getElementById(baseId);
-  const cityEl  = document.getElementById(baseId + "_city");
-  const placeEl = document.getElementById(baseId + "_place");
-  return {
-    province: provEl  ? provEl.value  : "",
-    city:     cityEl  ? cityEl.value  : "",
-    place:    placeEl ? placeEl.value : "",
-  };
+// --- DROPDOWNS & WEATHER ---
+function createDropdowns(id) {
+  const container = document.getElementById(id + "Wrapper");
+  container.innerHTML = `
+    <label class="lbl">${id === 'origin' ? 'From' : 'To'}</label>
+    <select class="input" id="${id}_province" onchange="updateCities('${id}')">
+      <option value="" disabled selected>Select Province</option>
+      ${PROVINCES_DATA.map(p => `<option value="${p.key}">${p.name}</option>`).join("")}
+    </select>
+    <div id="${id}_cityWrap"></div>`;
 }
 
-async function quickCheck() {
-  const sel = getSelection("quickProvince");
-  if (!sel.province) return showToast("Select a province.", true);
-  if (!sel.city)     return showToast("Select a city.", true);
-
-  const box = document.getElementById("quickResult");
-  box.classList.remove("hidden");
-  box.innerHTML = spinner("Fetching weather...");
-
-  try {
-    const data = await postJSON("/api/weather", { province: sel.province, city: sel.city, place: sel.place });
-    box.innerHTML = weatherCard(data);
-  } catch (err) {
-    box.innerHTML = "<p style=\"color:var(--red)\">" + err.message + "</p>";
-  }
-}
-
-function weatherCard(d) {
-  const heading = d.place && d.place !== d.city ? d.place + " - " + d.city + ", " + d.province : d.city + ", " + d.province;
-  return "<div class=\"result-info\" style=\"width:100%\">" +
-    "<h3>" + heading + "</h3>" +
-    "<div class=\"temp\">" + d.temp + "C</div>" +
-    "<div class=\"desc\">" + d.description + "</div>" +
-    "<div class=\"meta-pills\">" +
-    "<span class=\"pill\">Feels like " + d.feels_like + "C</span>" +
-    "<span class=\"pill\">Humidity " + d.humidity + "%</span>" +
-    "<span class=\"pill\">Wind " + d.wind_kph + " km/h</span>" +
-    "</div></div>";
-}
-
-let stopCount = 0;
-
-function addStop() {
-  stopCount++;
-  const pid     = "stop_" + stopCount;
-  const wrapper = document.getElementById("stopsWrapper");
-
-  if (stopCount === 1) {
-    const lbl = document.createElement("label");
-    lbl.className = "lbl";
-    lbl.id = "stopsLabel";
-    lbl.textContent = "Stops along the way";
-    wrapper.prepend(lbl);
-  }
-
-  const row = document.createElement("div");
-  row.className = "stop-row";
-  row.id = "row_" + pid;
-  row.style.cssText = "flex-direction:column;align-items:stretch;gap:.5rem";
-  row.innerHTML =
-    buildSelectionGroup(pid, "Select a province") +
-    "<button class=\"btn btn-remove\" onclick=\"removeStop('" + pid + "')\">Remove stop</button>";
-  wrapper.appendChild(row);
-}
-
-function removeStop(id) {
-  const row = document.getElementById("row_" + id);
-  if (row) row.remove();
-  if (document.querySelectorAll("#stopsWrapper .stop-row").length === 0) {
-    const lbl = document.getElementById("stopsLabel");
-    if (lbl) lbl.remove();
-  }
-}
-
-function getStops() {
-  const rows  = document.querySelectorAll("#stopsWrapper .stop-row");
-  const stops = [];
-  rows.forEach(function(row) {
-    const provSel = row.querySelector("select");
-    if (!provSel || !provSel.value) return;
-    const baseId = provSel.id;
-    const sel    = getSelection(baseId);
-    if (!sel.city) return;
-    stops.push(sel);
-  });
-  return stops;
+function updateCities(id) {
+  const pKey = document.getElementById(id + "_province").value;
+  const prov = PROVINCES_DATA.find(p => p.key === pKey);
+  document.getElementById(id + "_cityWrap").innerHTML = `
+    <select class="input" id="${id}_city" style="margin-top:8px">
+      <option value="" disabled selected>Select City</option>
+      ${prov.cities.map(c => `<option value="${c.key}">${c.name}</option>`).join("")}
+    </select>`;
 }
 
 async function planJourney() {
-  const origin      = getSelection("origin");
-  const destination = getSelection("destination");
-  const stops       = getStops();
+  const oP = document.getElementById("origin_province")?.value;
+  const oC = document.getElementById("origin_city")?.value;
+  const dP = document.getElementById("destination_province")?.value;
+  const dC = document.getElementById("destination_city")?.value;
 
-  if (!origin.province)      return showToast("Select an origin province.", true);
-  if (!origin.city)          return showToast("Select an origin city.", true);
-  if (!destination.province) return showToast("Select a destination province.", true);
-  if (!destination.city)     return showToast("Select a destination city.", true);
+  if (!oP || !oC || !dP || !dC) return alert("Select locations!");
 
-  const resultSection = document.getElementById("journeyResult");
-  resultSection.classList.remove("hidden");
-  resultSection.style.display = "flex";
-  resultSection.innerHTML = spinner("Planning your journey...");
+  const resDiv = document.getElementById("journeyResult");
+  resDiv.classList.remove("hidden");
+  resDiv.innerHTML = "<div class='card'>Fetching route & weather...</div>";
 
   try {
-    const data = await postJSON("/api/journey", { origin, destination, stops });
-    renderJourney(data, resultSection);
-    resultSection.scrollIntoView({ behavior: "smooth" });
-  } catch (err) {
-    resultSection.innerHTML = "<div class=\"card\" style=\"border-color:rgba(231,76,60,.3)\"><p style=\"color:var(--red)\">" + err.message + "</p></div>";
-    showToast(err.message, true);
+    const r = await fetch(API + "/api/journey", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ origin: { province: oP, city: oC }, destination: { province: dP, city: dC }, stops: [] })
+    });
+    const data = await r.json();
+
+    let weatherHtml = `<h3>Weather Ahead</h3>`;
+    data.waypoints.forEach(wp => {
+      weatherHtml += `<div class="weather-step"><span class="step-city">${wp.city}</span><span class="step-info">${wp.temp}°C - ${wp.description}</span></div>`;
+    });
+
+    resDiv.innerHTML = `<div class="card"><h3>Distance: ${data.total_km} km</h3>${weatherHtml}
+      <button class="btn btn-primary" style="background:var(--green); margin-top:15px" onclick='startNav(${JSON.stringify(data)})'>START JOURNEY</button></div>`;
+  } catch (e) { resDiv.innerHTML = "Server error."; }
+}
+
+function startNav(data) {
+  const user = JSON.parse(localStorage.getItem("currentUser"));
+  document.getElementById("plannerPage").classList.add("hidden");
+  document.getElementById("navigationPage").classList.remove("hidden");
+  toggleFooter(false); // HIDE FOOTER ON MAP
+
+  if (!map) {
+    map = L.map('map').setView([data.waypoints[0].lat, data.waypoints[0].lon], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png').addTo(map);
   }
+  if (routingControl) map.removeControl(routingControl);
+  routingControl = L.Routing.control({
+    waypoints: data.waypoints.map(wp => L.latLng(wp.lat, wp.lon)),
+    show: false
+  }).addTo(map);
+
+  const dest = data.waypoints[data.waypoints.length - 1].city;
+  document.getElementById("destDisplay").innerText = "To: " + dest;
+  
+  const msg = new SpeechSynthesisUtterance(`Hello ${user.name}. Navigation starting to ${dest}. Drive safely!`);
+  window.speechSynthesis.speak(msg);
 }
 
-function renderJourney(data, container) {
-  const waypoints   = data.waypoints;
-  const segments    = data.segments;
-  const total_km    = data.total_km;
-  const total_hours = data.total_hours;
-
-  const summaryHTML =
-    "<div class=\"summary-bar\">" +
-    "<div class=\"summary-stat\"><div class=\"val\">" + total_km.toLocaleString() + "</div><div class=\"lbl\">Total km</div></div>" +
-    "<div class=\"summary-stat\"><div class=\"val\">" + total_hours + "h</div><div class=\"lbl\">Drive time</div></div>" +
-    "<div class=\"summary-stat\"><div class=\"val\">" + waypoints.length + "</div><div class=\"lbl\">Stops</div></div>" +
-    "</div>";
-
-  let routeHTML = "<div class=\"card\"><div class=\"card-title\">Route Overview</div>";
-  waypoints.forEach(function(wp, i) {
-    const dotClass = i === 0 ? "origin" : i === waypoints.length - 1 ? "dest" : "stop";
-    const label    = wp.place && wp.place !== wp.city ? wp.place + ", " + wp.city : wp.city + ", " + wp.province;
-    routeHTML +=
-      "<div class=\"route-line\">" +
-      "<div class=\"route-dot " + dotClass + "\"></div>" +
-      "<span>" + label + "</span>" +
-      "<span style=\"flex:1\"></span>" +
-      "<span style=\"color:var(--accent)\">" + wp.temp + "C</span>" +
-      "<span style=\"color:var(--muted);margin-left:.4rem\">" + wp.description + "</span>" +
-      "</div>";
-    if (segments[i]) {
-      routeHTML +=
-        "<div class=\"route-line\" style=\"padding-left:1.4rem;opacity:.6\">" +
-        "<div class=\"route-seg-line\"></div>" +
-        "<span class=\"route-seg-dist\">" + segments[i].distance_km + " km - ~" + segments[i].drive_hours + "h</span>" +
-        "</div>";
-    }
-  });
-  routeHTML += "</div>";
-
-  const wpCardsHTML =
-    "<div class=\"card\"><div class=\"card-title\">Weather at Each Stop</div>" +
-    "<div class=\"waypoints-grid\">" +
-    waypoints.map(function(wp, i) { return waypointCard(wp, i, waypoints.length); }).join("") +
-    "</div></div>";
-
-  const segRows = segments.map(function(s) {
-    return "<tr><td>" + s.from + "</td><td>to</td><td>" + s.to + "</td>" +
-      "<td class=\"dist\">" + s.distance_km + " km</td>" +
-      "<td class=\"time\">~" + s.drive_hours + "h</td></tr>";
-  }).join("");
-
-  const segTableHTML =
-    "<div class=\"card\"><div class=\"card-title\">Segment Distances</div>" +
-    "<table class=\"seg-table\"><thead><tr>" +
-    "<th>From</th><th></th><th>To</th><th>Distance</th><th>Drive time</th>" +
-    "</tr></thead><tbody>" + segRows + "</tbody></table></div>";
-
-  container.innerHTML = summaryHTML + routeHTML + wpCardsHTML + segTableHTML;
-}
-
-function waypointCard(wp, index, total) {
-  const isOrigin   = index === 0;
-  const isDest     = index === total - 1;
-  const badgeClass = isOrigin ? "badge-origin" : isDest ? "badge-dest" : "badge-stop";
-  const badgeText  = isOrigin ? "Origin" : isDest ? "Destination" : "Stop " + index;
-  const cardClass  = isOrigin ? "origin-card" : isDest ? "dest-card" : "";
-  const placeLine  = wp.place && wp.place !== wp.city ? wp.place : "";
-
-  return "<div class=\"wp-card " + cardClass + "\">" +
-    "<div class=\"wp-badge " + badgeClass + "\">" + badgeText + "</div>" +
-    (placeLine ? "<div class=\"wp-place\">" + placeLine + "</div>" : "") +
-    "<div class=\"wp-city\">" + wp.city + "</div>" +
-    "<div class=\"wp-country\">" + wp.province + "</div>" +
-    "<div class=\"wp-temp\">" + wp.temp + "C</div>" +
-    "<div class=\"wp-desc\">" + wp.description + "</div>" +
-    "<div class=\"wp-extras\">Humidity " + wp.humidity + "% - Wind " + wp.wind_kph + " km/h</div>" +
-    "</div>";
-}
-
-async function postJSON(endpoint, body) {
-  const res = await fetch(API + endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Server error");
-  return data;
-}
-
-function spinner(msg) {
-  return "<div class=\"spinner-wrap\"><div class=\"spinner\"></div>" + (msg || "Loading...") + "</div>";
-}
-
-window.addEventListener("DOMContentLoaded", async function() {
+window.addEventListener("DOMContentLoaded", async () => {
+  wipeFields();
   try {
-    const res  = await fetch(API + "/api/provinces");
-    PROVINCES_DATA = await res.json();
-  } catch (e) {
-    showToast("Could not load data. Is the server running?", true);
-    return;
-  }
-
-  document.querySelector("#quickCard .input-row").innerHTML =
-    buildSelectionGroup("quickProvince", "Select a province...") +
-    "<button class=\"btn btn-accent\" onclick=\"quickCheck()\">Check</button>";
-
-  document.getElementById("originWrapper").innerHTML      = buildSelectionGroup("origin", "Select origin province");
-  document.getElementById("destinationWrapper").innerHTML = buildSelectionGroup("destination", "Select destination province");
+    const r = await fetch(API + "/api/provinces");
+    PROVINCES_DATA = await r.json();
+    ["origin", "destination"].forEach(id => createDropdowns(id));
+    if(localStorage.getItem("currentUser")) showPlanner();
+    else toggleFooter(true);
+  } catch (e) { console.log("Offline"); toggleFooter(true); }
 });

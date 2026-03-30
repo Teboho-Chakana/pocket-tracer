@@ -3,57 +3,84 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RouteAhead - Journey Weather Planner</title>
+  <title>RouteAhead - Secure Navigation</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-  <header>
-    <div class="logo">Route<span>Ahead</span></div>
-    <p class="tagline">Live weather - Every province - Every km</p>
-  </header>
+  <div id="loginPage">
+    <header>
+      <div class="logo">Route<span>Ahead</span></div>
+      <p class="tagline" id="authSubtitle">Sign in to start your journey</p>
+    </header>
+    <main>
+      <section class="card">
+        <div id="signupFields" class="hidden">
+          <label class="lbl">Full Name</label>
+          <input type="text" id="usernameInput" class="input" placeholder="e.g. Alex" autocomplete="off" />
+        </div>
+        
+        <label class="lbl" style="margin-top:10px">Email Address</label>
+        <input type="email" id="emailInput" class="input" placeholder="name@example.com" autocomplete="off" />
+        
+        <label class="lbl" style="margin-top:15px">Password</label>
+        <input type="password" id="passwordInput" class="input" placeholder="••••••••" autocomplete="new-password" />
+        
+        <button class="btn btn-primary" id="authBtn" onclick="handleAuth()" style="margin-top:20px">Login</button>
+        
+        <p style="text-align:center; margin-top:20px; font-size:0.85rem">
+          <span id="toggleText">Don't have an account?</span> 
+          <a href="#" onclick="toggleAuthMode()" id="toggleLink">Create Account</a>
+        </p>
+      </section>
+    </main>
+  </div>
 
-  <main>
-
-    <section class="card" id="quickCard">
-      <h2 class="card-title">Quick Weather Check</h2>
-      <div class="input-row">
-        <label for="quickProvince" class="sr-only">Province</label>
-        <select id="quickProvince" class="input"></select>
-        <button class="btn btn-accent" onclick="quickCheck()">Check</button>
+  <div id="plannerPage" class="hidden">
+    <header>
+      <div class="logo">Route<span>Ahead</span></div>
+      <div style="display:flex; justify-content:center; align-items:center; gap:10px">
+        <p id="welcomeUser" style="color:var(--accent); font-weight:bold;"></p>
+        <button onclick="logout()" class="logout-btn">Logout</button>
       </div>
-      <div id="quickResult" class="result-box hidden"></div>
-    </section>
+    </header>
+    <main>
+      <section class="card">
+        <h2 class="card-title">Plan Your Journey</h2>
+        <div id="originWrapper"></div>
+        <div id="destinationWrapper" style="margin-top:15px"></div>
+        <button class="btn btn-primary" onclick="planJourney()" style="margin-top:20px">Calculate Journey</button>
+      </section>
+      <div id="journeyResult" class="hidden"></div>
+    </main>
+  </div>
 
-    <section class="card" id="journeyCard">
-      <h2 class="card-title">Plan Your Journey</h2>
+  <div id="navigationPage" class="hidden">
+    <div id="map"></div>
+    <div class="nav-overlay">
+      <div class="nav-card">
+        <div id="navStatus">NAVIGATION ACTIVE</div>
+        <div id="destDisplay"></div>
+        <button class="btn btn-primary" style="background:var(--red); margin-top:15px; color:white;" onclick="location.reload()">EXIT NAVIGATION</button>
+      </div>
+    </div>
+  </div>
 
-      <label class="lbl" for="origin">Origin Province</label>
-      <div id="originWrapper"></div>
-
-      <div id="stopsWrapper"></div>
-
-      <button class="btn btn-ghost add-stop-btn" onclick="addStop()">+ Add a stop</button>
-
-      <label class="lbl" for="destination">Destination Province</label>
-      <div id="destinationWrapper"></div>
-
-      <button class="btn btn-primary" onclick="planJourney()">
-        Get Journey Weather
-      </button>
-    </section>
-
-    <section id="journeyResult" class="hidden"></section>
-
-  </main>
-
-  <footer>
-    RouteAhead &copy; 2025 - Powered by
-    <a href="https://open-meteo.com" target="_blank">Open-Meteo</a>
+  <footer id="mainFooter" class="footer">
+    <div class="footer-content">
+      <p>&copy; 2026 RouteAhead Navigation. All rights reserved.</p>
+      <div class="footer-links">
+        <span>Privacy Policy</span> | <span>Terms of Service</span> | <span>Support</span>
+      </div>
+    </div>
   </footer>
-
-  <div id="toast" class="toast"></div>
 
   <script src="app.js"></script>
 </body>
