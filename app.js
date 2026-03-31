@@ -1,4 +1,5 @@
 // --- UPDATED API LINK ---
+// Use the Vercel link for production
 const API = "https://pocket-tracer-nine.vercel.app"; 
 let PROVINCES_DATA = [];
 let map = null;
@@ -7,15 +8,19 @@ let isLoginMode = true;
 
 // --- UI HELPERS ---
 function wipeFields() {
-  document.getElementById("emailInput").value = "";
-  document.getElementById("passwordInput").value = "";
-  document.getElementById("usernameInput").value = "";
+  const fields = ["emailInput", "passwordInput", "usernameInput"];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
 }
 
 function toggleFooter(show) {
   const footer = document.getElementById("mainFooter");
-  if (show) footer.classList.remove("hidden");
-  else footer.classList.add("hidden");
+  if (footer) {
+    if (show) footer.classList.remove("hidden");
+    else footer.classList.add("hidden");
+  }
 }
 
 // --- AUTH LOGIC ---
@@ -56,10 +61,16 @@ function handleAuth() {
 
 function showPlanner() {
   const user = JSON.parse(localStorage.getItem("currentUser"));
+  if (!user) return;
   document.getElementById("loginPage").classList.add("hidden");
   document.getElementById("plannerPage").classList.remove("hidden");
   document.getElementById("welcomeUser").innerText = `Welcome, ${user.name}`;
   toggleFooter(true);
+  
+  // Re-run dropdown creation if data was already fetched
+  if (PROVINCES_DATA.length > 0) {
+    ["origin", "destination"].forEach(id => createDropdowns(id));
+  }
 }
 
 function logout() {
@@ -71,6 +82,7 @@ function logout() {
 // --- DROPDOWNS & WEATHER ---
 function createDropdowns(id) {
   const container = document.getElementById(id + "Wrapper");
+  if (!container) return;
   container.innerHTML = `
     <label class="lbl">${id === 'origin' ? 'From' : 'To'}</label>
     <select class="input" id="${id}_province" onchange="updateCities('${id}')">
@@ -83,11 +95,14 @@ function createDropdowns(id) {
 function updateCities(id) {
   const pKey = document.getElementById(id + "_province").value;
   const prov = PROVINCES_DATA.find(p => p.key === pKey);
-  document.getElementById(id + "_cityWrap").innerHTML = `
-    <select class="input" id="${id}_city" style="margin-top:8px">
-      <option value="" disabled selected>Select City</option>
-      ${prov.cities.map(c => `<option value="${c.key}">${c.name}</option>`).join("")}
-    </select>`;
+  const cityWrap = document.getElementById(id + "_cityWrap");
+  if (cityWrap && prov) {
+    cityWrap.innerHTML = `
+      <select class="input" id="${id}_city" style="margin-top:8px">
+        <option value="" disabled selected>Select City</option>
+        ${prov.cities.map(c => `<option value="${c.key}">${c.name}</option>`).join("")}
+      </select>`;
+  }
 }
 
 async function planJourney() {
@@ -106,7 +121,7 @@ async function planJourney() {
     const r = await fetch(API + "/api/journey", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ origin: { province: oP, city: oC }, destination: { province: dP, city: dC }, stops: [] })
+      body: JSON.stringify({ origin: { province: oP, city: oC }, destination: { province: dP, city: dC } })
     });
     const data = await r.json();
 
@@ -115,41 +130,61 @@ async function planJourney() {
       weatherHtml += `<div class="weather-step"><span class="step-city">${wp.city}</span><span class="step-info">${wp.temp}°C - ${wp.description}</span></div>`;
     });
 
-    resDiv.innerHTML = `<div class="card"><h3>Distance: ${data.total_km} km</h3>${weatherHtml}
-      <button class="btn btn-primary" style="background:var(--green); margin-top:15px" onclick='startNav(${JSON.stringify(data)})'>START JOURNEY</button></div>`;
-  } catch (e) { resDiv.innerHTML = "Server error."; }
+    resDiv.innerHTML = `
+      <div class="card">
+        <h3>Distance: ${data.total_km} km</h3>
+        ${weatherHtml}
+        <button class="btn btn-primary" style="background:var(--green); margin-top:15px" onclick='startNav(${JSON.stringify(data)})'>START JOURNEY</button>
+      </div>`;
+  } catch (e) { resDiv.innerHTML = "<div class='card'>Server error. Please try again.</div>"; }
 }
 
 function startNav(data) {
   const user = JSON.parse(localStorage.getItem("currentUser"));
   document.getElementById("plannerPage").classList.add("hidden");
   document.getElementById("navigationPage").classList.remove("hidden");
-  toggleFooter(false); // HIDE FOOTER ON MAP
+  toggleFooter(false);
 
   if (!map) {
     map = L.map('map').setView([data.waypoints[0].lat, data.waypoints[0].lon], 16);
     L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png').addTo(map);
   }
+  
   if (routingControl) map.removeControl(routingControl);
+  
   routingControl = L.Routing.control({
     waypoints: data.waypoints.map(wp => L.latLng(wp.lat, wp.lon)),
-    show: false
+    show: false,
+    addWaypoints: false,
+    routeWhileDragging: false
   }).addTo(map);
 
   const dest = data.waypoints[data.waypoints.length - 1].city;
   document.getElementById("destDisplay").innerText = "To: " + dest;
   
- const msg = new SpeechSynthesisUtterance(`Hello ${user.name}. Navigation starting to ${dest}. Drive safely!`);
-window.speechSynthesis.speak(msg);
+  const msg = new SpeechSynthesisUtterance(`Hello ${user.name}. Navigation starting to ${dest}. Drive safely!`);
+  window.speechSynthesis.speak(msg);
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
   wipeFields();
   try {
     const r = await fetch(API + "/api/provinces");
+    if (!r.ok) throw new Error("Network response was not ok");
     PROVINCES_DATA = await r.json();
-    ["origin", "destination"].forEach(id => createDropdowns(id));
-    if(localStorage.getItem("currentUser")) showPlanner();
-    else toggleFooter(true);
-  } catch (e) { console.log("Offline"); toggleFooter(true); }
+    
+    if(localStorage.getItem("currentUser")) {
+      showPlanner();
+    } else {
+      toggleFooter(true);
+    }
+  } catch (e) { 
+    console.error("Fetch error:", e);
+    const resDiv = document.getElementById("journeyResult");
+    if (resDiv) {
+        resDiv.classList.remove("hidden");
+        resDiv.innerHTML = "<div class='card'>Could not connect to server. Check your connection.</div>";
+    }
+    toggleFooter(true); 
+  }
 });
