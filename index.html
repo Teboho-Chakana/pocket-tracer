@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=1" />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet" />
 </head>
 <body>
@@ -27,10 +27,10 @@
           <input type="text" id="usernameInput" class="input" placeholder="e.g. Alex" autocomplete="off" />
         </div>
         
-        <label class="lbl" style="margin-top:10px">Email Address</label>
+        <label class="lbl" style="display: block; margin-top:10px">Email Address</label>
         <input type="email" id="emailInput" class="input" placeholder="name@example.com" autocomplete="off" />
         
-        <label class="lbl" style="margin-top:15px">Password</label>
+        <label class="lbl" style="display: block; margin-top:15px">Password</label>
         <input type="password" id="passwordInput" class="input" placeholder="••••••••" autocomplete="new-password" />
         
         <button class="btn btn-primary" id="authBtn" onclick="handleAuth()" style="margin-top:20px">Login</button>
@@ -82,6 +82,6 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=1"></script>
 </body>
 </html>
