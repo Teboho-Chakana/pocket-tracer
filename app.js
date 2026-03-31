@@ -139,8 +139,8 @@ function startNav(data) {
   const dest = data.waypoints[data.waypoints.length - 1].city;
   document.getElementById("destDisplay").innerText = "To: " + dest;
   
-  const msg = new SpeechSynthesisUtterance(`Hello ${user.name}. Navigation starting to ${dest}. Drive safely!`);
-  window.speechSynthesis.speak(msg);
+ const msg = new SpeechSynthesisUtterance(`Hello ${user.name}. Navigation starting to ${dest}. Drive safely!`);
+window.speechSynthesis.speak(msg);
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
