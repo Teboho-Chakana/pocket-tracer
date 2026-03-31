@@ -1,87 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RouteAhead - Secure Navigation</title>
-  
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-
-  <link rel="stylesheet" href="style.css?v=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@800&family=DM+Sans:wght@400;700&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RouteAhead</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
-  <div id="loginPage">
-    <header>
-      <div class="logo">Route<span>Ahead</span></div>
-      <p class="tagline" id="authSubtitle">Sign in to start your journey</p>
-    </header>
-    <main>
-      <section class="card">
-        <div id="signupFields" class="hidden">
-          <label class="lbl">Full Name</label>
-          <input type="text" id="usernameInput" class="input" placeholder="e.g. Alex" autocomplete="off" />
+    <div class="logo-header">
+        <span class="logo-white">Route</span><span class="logo-gold">Ahead</span>
+    </div>
+
+    <div class="container">
+        <div id="authPage" class="card">
+            <h2 id="authTitle">Sign In</h2>
+            <input type="text" id="nameInput" class="input hidden" placeholder="Full Name" autocomplete="off">
+            <input type="email" id="emailInput" class="input" placeholder="Email Address" autocomplete="off">
+            <input type="password" id="passwordInput" class="input" placeholder="Password" autocomplete="new-password">
+            <button id="authBtn" class="btn btn-auth" onclick="handleAuth()">Login</button>
+            <a href="javascript:void(0)" id="toggleText" class="toggle-link" onclick="toggleAuth()">Don't have an account? Sign Up</a>
         </div>
-        
-        <label class="lbl" style="display: block; margin-top:10px">Email Address</label>
-        <input type="email" id="emailInput" class="input" placeholder="name@example.com" autocomplete="off" />
-        
-        <label class="lbl" style="display: block; margin-top:15px">Password</label>
-        <input type="password" id="passwordInput" class="input" placeholder="••••••••" autocomplete="new-password" />
-        
-        <button class="btn btn-primary" id="authBtn" onclick="handleAuth()" style="margin-top:20px">Login</button>
-        
-        <p style="text-align:center; margin-top:20px; font-size:0.85rem">
-          <span id="toggleText">Don't have an account?</span> 
-          <a href="#" onclick="toggleAuthMode()" id="toggleLink">Create Account</a>
-        </p>
-      </section>
-    </main>
-  </div>
 
-  <div id="plannerPage" class="hidden">
-    <header>
-      <div class="logo">Route<span>Ahead</span></div>
-      <div style="display:flex; justify-content:center; align-items:center; gap:10px">
-        <p id="welcomeUser" style="color:var(--accent); font-weight:bold;"></p>
-        <button onclick="logout()" class="logout-btn">Logout</button>
-      </div>
-    </header>
-    <main>
-      <section class="card">
-        <h2 class="card-title">Plan Your Journey</h2>
-        <div id="originWrapper"></div>
-        <div id="destinationWrapper" style="margin-top:15px"></div>
-        <button class="btn btn-primary" onclick="planJourney()" style="margin-top:20px">Calculate Journey</button>
-      </section>
-      <div id="journeyResult" class="hidden"></div>
-    </main>
-  </div>
+        <div id="plannerPage" class="card hidden">
+            <h2>Plan Your Journey</h2>
+            <div id="originWrapper"></div>
+            <div id="destinationWrapper"></div>
+            <button class="btn btn-calc" onclick="planJourney()">Calculate Journey Weather</button>
+            <div id="journeyResult" class="hidden"></div>
+        </div>
 
-  <div id="navigationPage" class="hidden">
-    <div id="map"></div>
-    <div class="nav-overlay">
-      <div class="nav-card">
-        <div id="navStatus">NAVIGATION ACTIVE</div>
-        <div id="destDisplay"></div>
-        <button class="btn btn-primary" style="background:var(--red); margin-top:15px; color:white;" onclick="location.reload()">EXIT NAVIGATION</button>
-      </div>
+        <div id="navigationPage" class="hidden">
+            <div id="map"></div>
+            <div style="text-align: center;">
+                <button class="btn btn-reset" onclick="location.reload()">Reset and Return</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <footer id="mainFooter" class="footer">
-    <div class="footer-content">
-      <p>&copy; 2026 RouteAhead Navigation. All rights reserved.</p>
-      <div class="footer-links">
-        <span>Privacy Policy</span> | <span>Terms of Service</span> | <span>Support</span>
-      </div>
-    </div>
-  </footer>
+    <footer class="footer">
+        <div>&copy; 2026 RouteAhead Navigation. All rights reserved.</div>
+    </footer>
 
-  <script src="app.js?v=1"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
